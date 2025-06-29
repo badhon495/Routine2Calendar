@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎓 Routine2Calendar - BRACU Schedule to Google Calendar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body class="app-body">
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-container">
+            <div class="header-content">
+                <div class="header-title">
+                    <h1>🎓 Routine2Calendar</h1>
+                </div>
+                <div class="header-actions">
+                    <button id="resetBtn" class="btn btn-reset">
+                        <i class="fas fa-refresh icon-sm"></i> Reset
+                    </button>
+                    <button id="loadDataBtn" class="btn btn-primary">
+                        <i class="fas fa-download icon"></i> Load Course Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Loading State -->
+        <div id="loadingState" class="state-container">
+            <div class="loading-spinner inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mb-4"></div>
+            <p class="text-gray">Loading course data...</p>
+        </div>
+
+        <!-- Initial State -->
+        <div id="initialState" class="state-container hidden">
+            <div class="state-card">
+                <div class="initial-card">
+                    <i class="fas fa-calendar-alt text-6xl text-primary mb-6"></i>
+                    <h2 class="text-2xl font-bold text-dark mb-4">Get Started</h2>
+                    <p class="text-gray mb-6">Load BRACU course data and start building your schedule!</p>
+                    <button onclick="loadCourseData()" class="btn btn-primary btn-full">
+                        <i class="fas fa-download icon"></i> Load Course Data
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Course Selection -->
+        <div id="courseSelection" class="hidden">
+            <!-- Selected Courses -->
+            <div id="selectedCourses" class="hidden">
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <i class="fas fa-check-circle icon text-success"></i> Selected Courses
+                        </h2>
+                        <button id="exportBtn" class="btn btn-success">
+                            <i class="fas fa-calendar-plus icon"></i> Export Schedule
+                        </button>
+                    </div>
+                    <div id="selectedCoursesList" class="courses-list"></div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <h2 class="section-title mb-4">
+                    <i class="fas fa-search icon text-primary"></i> Find Courses
+                </h2>
+                <div class="form-container">
+                    <div class="form-group">
+                        <input type="text" id="courseSearch" placeholder="Search by course code (e.g., CSE110, ENG101)" 
+                               class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <select id="sectionFilter" class="form-select">
+                            <option value="">All Sections</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <select id="dayFilter" class="form-select">
+                            <option value="">All Days</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Results -->
+            <div id="searchResults" class="courses-grid"></div>
+        </div>
+    </main>
+
+    <!-- Course Modal -->
+    <div id="courseModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-body">
+                <div class="modal-header">
+                    <h3 class="modal-title">Edit Course Details</h3>
+                    <button id="closeModal" class="modal-close">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <form id="courseForm" class="modal-form">
+                    <div class="modal-form-group">
+                        <label class="modal-label">Course Name</label>
+                        <input type="text" id="editCourseName" class="modal-input">
+                    </div>
+                    <div class="modal-form-group">
+                        <label class="modal-label">Course Title</label>
+                        <input type="text" id="editCourseTitle" class="modal-input">
+                    </div>
+                    <div class="modal-form-group">
+                        <label class="modal-label">Faculty Name</label>
+                        <input type="text" id="editFacultyName" class="modal-input">
+                    </div>
+                    <div class="modal-form-group">
+                        <label class="modal-label">Room Number</label>
+                        <input type="text" id="editRoomNumber" class="modal-input">
+                    </div>
+                    <div class="modal-form-group">
+                        <label class="modal-label">Instructor Email</label>
+                        <input type="email" id="editInstructorEmail" class="modal-input">
+                    </div>
+                    <div class="modal-form-group">
+                        <label class="modal-label">Event Type</label>
+                        <select id="editEventType" class="modal-select">
+                            <option value="normal">Normal Class</option>
+                            <option value="lab">Lab</option>
+                            <option value="exam">Exam</option>
+                        </select>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-primary btn-flex">
+                            Save Changes
+                        </button>
+                        <button type="button" id="cancelEdit" class="btn btn-secondary btn-flex">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
