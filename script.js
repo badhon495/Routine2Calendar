@@ -1126,18 +1126,9 @@ function showImportInstructions() {
             </h3>
             
             <div class="space-y-4 text-sm text-gray-700">
-                <div>
-                    <h4 class="font-semibold text-gray-900 mb-2">📱 Google Calendar (Mobile):</h4>
-                    <ol class="list-decimal list-inside space-y-1 ml-4">
-                        <li>Open Google Calendar app</li>
-                        <li>Tap the "+" button</li>
-                        <li>Select "Import"</li>
-                        <li>Choose the downloaded .ics file</li>
-                    </ol>
-                </div>
                 
                 <div>
-                    <h4 class="font-semibold text-gray-900 mb-2">💻 Google Calendar (Desktop):</h4>
+                    <h4 class="font-semibold text-gray-900 mb-2">💻 Google Calendar:</h4>
                     <ol class="list-decimal list-inside space-y-1 ml-4">
                         <li>Go to calendar.google.com</li>
                         <li>Click the gear icon → Settings</li>
