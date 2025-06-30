@@ -264,7 +264,7 @@ function displayCourses(courses = courseData) {
 
 function createCourseCard(courseCode, sections) {
     const card = document.createElement('div');
-    card.className = 'course-card bg-white rounded-lg shadow-sm border border-gray-200 p-6 fade-in';
+    card.className = 'course-card bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 fade-in';
     
     const firstSection = sections[0];
     const scheduleText = parseSchedule(firstSection.classSchedule);
@@ -273,28 +273,28 @@ function createCourseCard(courseCode, sections) {
     let courseTitle = firstSection.courseTitle;
     
     card.innerHTML = `
-        <div class="flex justify-between items-start mb-4">
-            <div>
-                <h3 class="text-lg font-bold text-gray-900">${courseCode}</h3>
-                <p class="text-sm text-gray-600">${courseTitle}</p>
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 space-y-2 sm:space-y-0">
+            <div class="flex-1 min-w-0">
+                <h3 class="text-lg font-bold text-gray-900 truncate">${courseCode}</h3>
+                <p class="text-sm text-gray-600 break-words">${courseTitle}</p>
             </div>
-            <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+            <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded self-start sm:self-auto shrink-0">
                 ${firstSection.courseCredit} Credits
             </span>
         </div>
         
-        <div class="space-y-2 mb-4">
-            <p class="text-sm text-gray-600">
-                <i class="fas fa-building text-blue-600 mr-2"></i>
-                ${firstSection.deptName}
+        <div class="space-y-1 sm:space-y-2 mb-4">
+            <p class="text-sm text-gray-600 flex items-start">
+                <i class="fas fa-building text-blue-600 mr-2 mt-0.5 shrink-0"></i>
+                <span class="break-words">${firstSection.deptName}</span>
             </p>
-            <p class="text-sm text-gray-600">
-                <i class="fas fa-clock text-blue-600 mr-2"></i>
-                ${scheduleText}
+            <p class="text-sm text-gray-600 flex items-start">
+                <i class="fas fa-clock text-blue-600 mr-2 mt-0.5 shrink-0"></i>
+                <span class="break-words">${scheduleText}</span>
             </p>
-            <p class="text-sm text-gray-600">
-                <i class="fas fa-users text-blue-600 mr-2"></i>
-                ${sections.length} section(s) available
+            <p class="text-sm text-gray-600 flex items-center">
+                <i class="fas fa-users text-blue-600 mr-2 shrink-0"></i>
+                <span>${sections.length} section(s) available</span>
             </p>
         </div>
         
@@ -305,18 +305,18 @@ function createCourseCard(courseCode, sections) {
                 
                 return `
                 <div class="bg-gray-50 rounded-lg p-3">
-                    <div class="flex justify-between items-center mb-2">
-                        <div class="flex-1">
-                            <span class="font-medium text-gray-900">Section ${section.sectionName} - ${section.roomName || 'TBA'}</span>
-                            <p class="text-sm text-gray-600">${section.empName}</p>
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 space-y-2 sm:space-y-0">
+                        <div class="flex-1 min-w-0">
+                            <span class="font-medium text-gray-900 block break-words">Section ${section.sectionName} - ${section.roomName || 'TBA'}</span>
+                            <p class="text-sm text-gray-600 break-words">${section.empName}</p>
                         </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="text-xs text-gray-500">
+                        <div class="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                            <span class="text-xs text-gray-500 text-center sm:text-right">
                                 ${section.availableSeat}/${section.defaultSeatCapacity} available
                             </span>
                             <button onclick="addCourse('${section.id}')" 
-                                    class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors">
-                                Add
+                                    class="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition-colors w-full sm:w-auto">
+                                Add Course
                             </button>
                         </div>
                     </div>
@@ -325,13 +325,13 @@ function createCourseCard(courseCode, sections) {
                     <div class="mt-3 pt-3 border-t border-gray-200">
                         <div class="bg-green-50 rounded p-2">
                             <div class="flex items-center mb-1">
-                                <i class="fas fa-flask text-green-600 mr-2"></i>
-                                <span class="text-sm font-medium text-green-800">Lab: ${section.labName}</span>
+                                <i class="fas fa-flask text-green-600 mr-2 shrink-0"></i>
+                                <span class="text-sm font-medium text-green-800 break-words">Lab: ${section.labName}</span>
                             </div>
-                            <p class="text-xs text-green-700">Room: ${section.labRoomName || 'TBA'}</p>
-                            <p class="text-xs text-green-700">Schedule: ${labScheduleText}</p>
+                            <p class="text-xs text-green-700 break-words">Room: ${section.labRoomName || 'TBA'}</p>
+                            <p class="text-xs text-green-700 break-words">Schedule: ${labScheduleText}</p>
                             <button onclick="addLabCourse('${section.id}')" 
-                                    class="mt-2 bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700 transition-colors">
+                                    class="mt-2 bg-green-600 text-white px-3 py-2 rounded text-xs hover:bg-green-700 transition-colors w-full sm:w-auto">
                                 Add Lab Only
                             </button>
                         </div>
@@ -474,47 +474,53 @@ function updateSelectedCoursesDisplay() {
 function createSelectedCourseElement(course, index) {
     const element = document.createElement('div');
     const isLab = course.isLabOnly;
-    element.className = `${isLab ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'} rounded-lg p-4 border`;
+    element.className = `${isLab ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'} rounded-lg p-3 sm:p-4 border`;
     
     const scheduleText = parseSchedule(course.classSchedule);
     const eventTypeIcon = getEventTypeIcon(course.eventType);
     
     element.innerHTML = `
-        <div class="flex justify-between items-start">
-            <div class="flex-1">
-                <div class="flex items-center mb-2">
-                    <i class="${eventTypeIcon} ${isLab ? 'text-green-600' : 'text-blue-600'} mr-2"></i>
-                    <h4 class="text-lg font-bold text-gray-900">${course.editableCourseName}</h4>
-                    <span class="ml-2 px-2 py-1 ${isLab ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'} text-xs rounded capitalize">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-3 sm:space-y-0">
+            <div class="flex-1 min-w-0">
+                <div class="flex flex-col sm:flex-row sm:items-center mb-2 space-y-1 sm:space-y-0">
+                    <div class="flex items-center">
+                        <i class="${eventTypeIcon} ${isLab ? 'text-green-600' : 'text-blue-600'} mr-2 shrink-0"></i>
+                        <h4 class="text-lg font-bold text-gray-900 break-words">${course.editableCourseName}</h4>
+                    </div>
+                    <span class="ml-0 sm:ml-2 px-2 py-1 ${isLab ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'} text-xs rounded capitalize self-start">
                         ${course.eventType}${isLab ? ' Only' : ''}
                     </span>
                 </div>
-                <p class="text-gray-700 mb-1">${course.editableCourseTitle}</p>
-                <p class="text-sm text-gray-600 mb-1">
-                    <i class="fas fa-user text-gray-400 mr-1"></i>
-                    ${course.editableFacultyName}
-                </p>
-                <p class="text-sm text-gray-600 mb-1">
-                    <i class="fas fa-door-open text-gray-400 mr-1"></i>
-                    Room: ${course.editableRoomNumber}
-                </p>
-                <p class="text-sm text-gray-600 mb-1">
-                    <i class="fas fa-envelope text-gray-400 mr-1"></i>
-                    ${course.editableInstructorEmail}
-                </p>
-                <p class="text-sm text-gray-600">
-                    <i class="fas fa-clock text-gray-400 mr-1"></i>
-                    ${scheduleText}
-                </p>
+                <p class="text-gray-700 mb-1 break-words">${course.editableCourseTitle}</p>
+                <div class="space-y-1">
+                    <p class="text-sm text-gray-600 flex items-start">
+                        <i class="fas fa-user text-gray-400 mr-2 mt-0.5 shrink-0"></i>
+                        <span class="break-words">${course.editableFacultyName}</span>
+                    </p>
+                    <p class="text-sm text-gray-600 flex items-start">
+                        <i class="fas fa-door-open text-gray-400 mr-2 mt-0.5 shrink-0"></i>
+                        <span class="break-words">Room: ${course.editableRoomNumber}</span>
+                    </p>
+                    <p class="text-sm text-gray-600 flex items-start">
+                        <i class="fas fa-envelope text-gray-400 mr-2 mt-0.5 shrink-0"></i>
+                        <span class="break-words">${course.editableInstructorEmail}</span>
+                    </p>
+                    <p class="text-sm text-gray-600 flex items-start">
+                        <i class="fas fa-clock text-gray-400 mr-2 mt-0.5 shrink-0"></i>
+                        <span class="break-words">${scheduleText}</span>
+                    </p>
+                </div>
             </div>
-            <div class="flex space-x-2 ml-4">
+            <div class="flex flex-row sm:flex-col space-x-2 sm:space-x-0 sm:space-y-2 sm:ml-4 shrink-0">
                 <button onclick="editCourse(${index})" 
-                        class="text-blue-600 hover:text-blue-800 p-2 rounded">
+                        class="text-blue-600 hover:text-blue-800 p-2 rounded border border-blue-200 hover:border-blue-300 transition-colors flex-1 sm:flex-none">
                     <i class="fas fa-edit"></i>
+                    <span class="ml-1 sm:hidden">Edit</span>
                 </button>
                 <button onclick="removeCourse(${index})" 
-                        class="text-red-600 hover:text-red-800 p-2 rounded">
+                        class="text-red-600 hover:text-red-800 p-2 rounded border border-red-200 hover:border-red-300 transition-colors flex-1 sm:flex-none">
                     <i class="fas fa-trash"></i>
+                    <span class="ml-1 sm:hidden">Remove</span>
                 </button>
             </div>
         </div>
@@ -1221,17 +1227,31 @@ function showCourseSelection() {
 
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 p-4 rounded-lg text-white z-50 ${
-        type === 'success' ? 'bg-green-600' : 
+    const isMobile = window.innerWidth < 640;
+    
+    notification.className = `fixed z-50 p-3 sm:p-4 rounded-lg text-white text-sm sm:text-base ${
+        isMobile ? 'top-4 left-3 right-3' : 'top-4 right-4'
+    } ${type === 'success' ? 'bg-green-600' : 
         type === 'error' ? 'bg-red-600' : 'bg-blue-600'
     }`;
-    notification.textContent = message;
+    
+    notification.innerHTML = `
+        <div class="flex items-center justify-between">
+            <span class="break-words">${message}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-white opacity-70 hover:opacity-100 shrink-0">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
     
     document.body.appendChild(notification);
     
+    // Auto remove after 4 seconds on mobile, 3 seconds on desktop
     setTimeout(() => {
-        notification.remove();
-    }, 3000);
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, isMobile ? 4000 : 3000);
 }
 
 // Local Storage functions

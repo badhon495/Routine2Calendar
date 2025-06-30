@@ -50,7 +50,7 @@
 .header-container {
     max-width: 80rem;
     margin: 0 auto;
-    padding: 0 1rem;
+    padding: 0 0.75rem;
 }
 
 @media (min-width: 640px) {
@@ -69,18 +69,33 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.5rem 0;
+    padding: 1rem 0;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+@media (max-width: 639px) {
+    .header-content {
+        padding: 0.75rem 0;
+    }
 }
 
 .header-title {
     display: flex;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .header-title h1 {
-    font-size: 1.875rem;
+    font-size: 1.5rem;
     font-weight: bold;
     color: #111827;
+}
+
+@media (min-width: 640px) {
+    .header-title h1 {
+        font-size: 1.875rem;
+    }
 }
 
 .header-title span {
@@ -92,12 +107,19 @@
 .header-actions {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+@media (min-width: 640px) {
+    .header-actions {
+        gap: 1rem;
+    }
 }
 
 /* Button styles */
 .btn {
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0.75rem;
     border-radius: 0.5rem;
     font-weight: 500;
     transition: all 0.15s ease-in-out;
@@ -106,11 +128,26 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    font-size: 0.875rem;
+}
+
+@media (min-width: 640px) {
+    .btn {
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
+    }
 }
 
 .btn-reset {
     color: #4b5563;
     background: transparent;
+    padding: 0.5rem;
+}
+
+@media (min-width: 640px) {
+    .btn-reset {
+        padding: 0.5rem 1rem;
+    }
 }
 
 .btn-reset:hover {
@@ -120,7 +157,13 @@
 .btn-primary {
     background-color: #2563eb;
     color: white;
-    padding: 0.75rem 1.5rem;
+    padding: 0.5rem 1rem;
+}
+
+@media (min-width: 640px) {
+    .btn-primary {
+        padding: 0.75rem 1.5rem;
+    }
 }
 
 .btn-primary:hover {
@@ -130,7 +173,13 @@
 .btn-success {
     background-color: #16a34a;
     color: white;
-    padding: 0.75rem 1.5rem;
+    padding: 0.5rem 1rem;
+}
+
+@media (min-width: 640px) {
+    .btn-success {
+        padding: 0.75rem 1.5rem;
+    }
 }
 
 .btn-success:hover {
@@ -158,7 +207,7 @@
 .main-content {
     max-width: 80rem;
     margin: 0 auto;
-    padding: 2rem 1rem;
+    padding: 1rem 0.75rem;
 }
 
 @media (min-width: 640px) {
@@ -176,7 +225,13 @@
 /* State containers */
 .state-container {
     text-align: center;
-    padding: 5rem 0;
+    padding: 2rem 0;
+}
+
+@media (min-width: 640px) {
+    .state-container {
+        padding: 5rem 0;
+    }
 }
 
 .state-card {
@@ -188,7 +243,13 @@
     background-color: white;
     border-radius: 0.5rem;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    padding: 2rem;
+    padding: 1.5rem;
+}
+
+@media (min-width: 640px) {
+    .initial-card {
+        padding: 2rem;
+    }
 }
 
 /* Section styles */
@@ -196,46 +257,77 @@
     background-color: white;
     border-radius: 0.5rem;
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    padding: 1.5rem;
+    padding: 1rem;
     margin-bottom: 1.5rem;
+}
+
+@media (min-width: 640px) {
+    .section-card {
+        padding: 1.5rem;
+    }
 }
 
 .section-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+    .section-header {
+        align-items: center;
+        flex-wrap: nowrap;
+    }
 }
 
 .section-title {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     font-weight: bold;
     color: #111827;
+    flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+    .section-title {
+        font-size: 1.25rem;
+    }
 }
 
 /* Form styles */
 .form-container {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.75rem;
 }
 
 @media (min-width: 768px) {
     .form-container {
         flex-direction: row;
+        gap: 1rem;
     }
 }
 
 .form-group {
     flex: 1;
+    min-width: 0;
 }
 
 .form-input, .form-select {
     width: 100%;
-    padding: 0.5rem 1rem;
+    padding: 0.75rem;
     border: 1px solid #d1d5db;
     border-radius: 0.5rem;
     font-size: 1rem;
+    box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+    .form-input, .form-select {
+        padding: 0.5rem 1rem;
+    }
 }
 
 .form-input:focus, .form-select:focus {
@@ -248,8 +340,14 @@
 .courses-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 1.5rem;
+    gap: 1rem;
     margin-bottom: 2rem;
+}
+
+@media (min-width: 768px) {
+    .courses-grid {
+        gap: 1.5rem;
+    }
 }
 
 @media (min-width: 1024px) {
@@ -261,7 +359,13 @@
 .courses-list {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+    .courses-list {
+        gap: 1rem;
+    }
 }
 
 /* Modal styles */
@@ -272,8 +376,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1rem;
+    padding: 0.75rem;
     z-index: 50;
+}
+
+@media (min-width: 640px) {
+    .modal-overlay {
+        padding: 1rem;
+    }
 }
 
 .modal-content {
@@ -282,12 +392,24 @@
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     max-width: 28rem;
     width: 100%;
-    max-height: 100vh;
+    max-height: 95vh;
     overflow-y: auto;
 }
 
+@media (min-width: 640px) {
+    .modal-content {
+        max-height: 100vh;
+    }
+}
+
 .modal-body {
-    padding: 1.5rem;
+    padding: 1rem;
+}
+
+@media (min-width: 640px) {
+    .modal-body {
+        padding: 1.5rem;
+    }
 }
 
 .modal-header {
@@ -298,9 +420,16 @@
 }
 
 .modal-title {
-    font-size: 1.125rem;
+    font-size: 1rem;
     font-weight: bold;
     color: #111827;
+    margin-right: 0.5rem;
+}
+
+@media (min-width: 640px) {
+    .modal-title {
+        font-size: 1.125rem;
+    }
 }
 
 .modal-close {
@@ -309,6 +438,7 @@
     border: none;
     cursor: pointer;
     padding: 0.5rem;
+    flex-shrink: 0;
 }
 
 .modal-close:hover {
@@ -318,7 +448,13 @@
 .modal-form {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+    .modal-form {
+        gap: 1rem;
+    }
 }
 
 .modal-form-group {
@@ -336,9 +472,17 @@
 
 .modal-input, .modal-select {
     width: 100%;
-    padding: 0.5rem 0.75rem;
+    padding: 0.75rem;
     border: 1px solid #d1d5db;
     border-radius: 0.5rem;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+    .modal-input, .modal-select {
+        padding: 0.5rem 0.75rem;
+    }
 }
 
 .modal-input:focus, .modal-select:focus {
@@ -349,68 +493,86 @@
 
 .modal-actions {
     display: flex;
-    gap: 0.75rem;
+    gap: 0.5rem;
     padding-top: 1rem;
+    flex-direction: column;
 }
 
-/* Icon styles */
-.icon {
-    margin-right: 0.5rem;
+@media (min-width: 640px) {
+    .modal-actions {
+        flex-direction: row;
+        gap: 0.75rem;
+    }
 }
 
-.icon-sm {
-    margin-right: 0.25rem;
+/* Additional responsive utility classes */
+.break-words {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
-/* Utility classes */
-.hidden {
-    display: none;
+.shrink-0 {
+    flex-shrink: 0;
 }
 
-.text-center {
-    text-align: center;
+.min-w-0 {
+    min-width: 0;
 }
 
-.text-primary {
-    color: #3b82f6;
+/* Hide text on mobile for compact buttons */
+@media (max-width: 639px) {
+    .btn .hidden-mobile {
+        display: none;
+    }
 }
 
-.text-success {
-    color: #16a34a;
+/* Improved notification positioning for mobile */
+@media (max-width: 639px) {
+    .notification-mobile {
+        position: fixed;
+        top: 1rem;
+        left: 0.75rem;
+        right: 0.75rem;
+        z-index: 60;
+    }
 }
 
-.text-gray {
-    color: #6b7280;
+/* Better modal positioning on mobile */
+@media (max-width: 639px) {
+    .modal-overlay {
+        align-items: flex-start;
+        padding-top: 2rem;
+    }
 }
 
-.text-dark {
-    color: #111827;
+/* Ensure proper spacing in flex containers on mobile */
+@media (max-width: 639px) {
+    .space-x-2 > * + * {
+        margin-left: 0.5rem;
+    }
+    
+    .space-y-1 > * + * {
+        margin-top: 0.25rem;
+    }
 }
 
-.text-lg {
-    font-size: 1.125rem;
+/* Fix font size issues on mobile */
+@media (max-width: 639px) {
+    select, input, textarea {
+        font-size: 16px !important; /* Prevents zoom on iOS */
+    }
 }
 
-.text-xl {
-    font-size: 1.25rem;
+/* Better button spacing in card actions */
+.card-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
-.text-2xl {
-    font-size: 1.5rem;
-}
-
-.text-6xl {
-    font-size: 4rem;
-}
-
-.font-bold {
-    font-weight: bold;
-}
-
-.mb-4 {
-    margin-bottom: 1rem;
-}
-
-.mb-6 {
-    margin-bottom: 1.5rem;
+@media (min-width: 640px) {
+    .card-actions {
+        gap: 0.75rem;
+        flex-wrap: nowrap;
+    }
 }
