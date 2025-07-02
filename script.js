@@ -284,14 +284,6 @@ function createCourseCard(courseCode, sections) {
         </div>
         
         <div class="space-y-1 sm:space-y-2 mb-4">
-            <p class="text-sm text-gray-600 flex items-start">
-                <i class="fas fa-building text-blue-600 mr-2 mt-0.5 shrink-0"></i>
-                <span class="break-words">${firstSection.deptName}</span>
-            </p>
-            <p class="text-sm text-gray-600 flex items-start">
-                <i class="fas fa-clock text-blue-600 mr-2 mt-0.5 shrink-0"></i>
-                <span class="break-words">${scheduleText}</span>
-            </p>
             <p class="text-sm text-gray-600 flex items-center">
                 <i class="fas fa-users text-blue-600 mr-2 shrink-0"></i>
                 <span>${sections.length} section(s) available</span>
@@ -975,7 +967,10 @@ function createICSEvent(course, dayName, startTime, endTime) {
     const startLocal = formatDateForICSLocal(startDateTime);
     const endLocal = formatDateForICSLocal(endDateTime);
     
-    return [
+    // Get notification time from user selection
+    const notificationMinutes = getNotificationTime();
+    
+    const eventLines = [
         'BEGIN:VEVENT',
         `UID:${uid}`,
         `DTSTART;TZID=Asia/Dhaka:${startLocal}`,
@@ -986,9 +981,23 @@ function createICSEvent(course, dayName, startTime, endTime) {
         `LOCATION:${location}`,
         `CATEGORIES:${course.eventType.toUpperCase()}`,
         'STATUS:CONFIRMED',
-        'TRANSP:OPAQUE',
-        'END:VEVENT'
+        'TRANSP:OPAQUE'
     ];
+    
+    // Add alarm/reminder if notification time is set
+    if (notificationMinutes > 0) {
+        eventLines.push(
+            'BEGIN:VALARM',
+            'ACTION:DISPLAY',
+            `DESCRIPTION:Reminder: ${summary}`,
+            `TRIGGER:-PT${notificationMinutes}M`,
+            'END:VALARM'
+        );
+    }
+    
+    eventLines.push('END:VEVENT');
+    
+    return eventLines;
 }
 
 function formatDateForICSLocal(date) {
@@ -1034,7 +1043,13 @@ function createGoogleCalendarURL(course, dayName, startTime, endTime) {
                            course.eventType === 'exam' ? '_Exam' : '';
     
     const title = `${course.editableCourseName}${eventTypeSuffix} (${course.editableRoomNumber})`;
-    const details = `Course: ${course.editableCourseTitle}\\nInstructor: ${course.editableFacultyName}\\nEmail: ${course.editableInstructorEmail}\\nRoom: ${course.editableRoomNumber}`;
+    
+    // Get notification time and create reminder text
+    const notificationMinutes = getNotificationTime();
+    const reminderText = notificationMinutes > 0 ? 
+        `\\n\\n🔔 Reminder: Set ${getNotificationTimeText(notificationMinutes)} reminder in Google Calendar` : '';
+    
+    const details = `Course: ${course.editableCourseTitle}\\nInstructor: ${course.editableFacultyName}\\nEmail: ${course.editableInstructorEmail}\\nRoom: ${course.editableRoomNumber}${reminderText}`;
     const location = 'BRAC University, 66 Mohakhali, Dhaka 1212';
     
     // Get next occurrence of this day
@@ -1195,6 +1210,20 @@ function parseTime(timeString) {
     }
     
     return [hour24, minutes, 0, 0];
+}
+
+// Helper function to get selected notification time
+function getNotificationTime() {
+    const selector = document.getElementById('notificationTime');
+    return selector ? parseInt(selector.value) : 10; // Default to 10 minutes
+}
+
+// Helper function to format notification time text
+function getNotificationTimeText(minutes) {
+    if (minutes === 0) return 'at event time';
+    if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''}`;
+    if (minutes < 1440) return `${Math.floor(minutes / 60)} hour${Math.floor(minutes / 60) > 1 ? 's' : ''}`;
+    return `${Math.floor(minutes / 1440)} day${Math.floor(minutes / 1440) > 1 ? 's' : ''}`;
 }
 
 // Utility functions
