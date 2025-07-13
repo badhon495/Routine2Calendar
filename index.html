@@ -136,9 +136,60 @@ href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 
     <link rel="license" href="LICENSE" title="MIT License">
 
     <!-- External Resources -->
-    <script src="https://cdn.tailwindcss.com" defer></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" media="print" onload="this.media='all'">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="styles.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Prevent FOUC -->
+    <style>
+        .app-body {
+            visibility: hidden;
+        }
+        .app-body.loaded {
+            visibility: visible;
+        }
+        
+        /* Loading spinner for initial load */
+        .initial-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        .initial-loading.hidden {
+            display: none;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        .spinner-sm {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f4f6;
+            border-top: 2px solid #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
     
     <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://usis-cdn.eniamza.com">
@@ -367,6 +418,14 @@ href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 
     </script>
 </head>
 <body class="app-body" itemscope itemtype="https://schema.org/WebApplication">
+    <!-- Initial Loading Screen -->
+    <div id="initialLoadingScreen" class="initial-loading">
+        <div class="text-center">
+            <div class="spinner mx-auto mb-4"></div>
+            <p class="text-gray-600">Loading Routine2Calendar...</p>
+        </div>
+    </div>
+
     <!-- Header -->
     <header class="app-header" role="banner">
         <div class="header-container">
@@ -413,10 +472,16 @@ href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 
             <div class="state-card">
                 <div class="initial-card">
                     <i class="fas fa-calendar-alt text-6xl text-primary mb-6" aria-hidden="true"></i>
-                    <h2 class="text-2xl font-bold text-dark mb-4">Get Started</h2>
-                    <p class="text-gray mb-6" itemprop="description">Load BRACU course data and start building your schedule!</p>
-                    <button onclick="loadCourseData()" class="btn btn-primary btn-full" aria-label="Load course data to begin">
-                        <i class="fas fa-download icon" aria-hidden="true"></i> Load Course Data
+                    <h2 class="text-2xl font-bold text-dark mb-4">Welcome to Routine2Calendar</h2>
+                    <p class="text-gray mb-6" itemprop="description">Course data is loading automatically. Once ready, you can start building your schedule!</p>
+                    <div id="autoLoadingIndicator" class="text-center">
+                        <div class="inline-flex items-center">
+                            <div class="spinner-sm mr-2"></div>
+                            <span class="text-gray-600">Loading course data...</span>
+                        </div>
+                    </div>
+                    <button onclick="loadCourseData()" class="btn btn-primary btn-full mt-4 hidden" id="manualLoadBtn" aria-label="Manually reload course data">
+                        <i class="fas fa-refresh icon" aria-hidden="true"></i> Reload Course Data
                     </button>
                 </div>
             </div>
@@ -562,7 +627,7 @@ href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 
         </div>
     </footer>
 
-    <script src="script.js" defer></script>
+    <script src="script.js"></script>
     <script src="analytics.js" defer></script>
     <script src="performance-monitor.js" defer></script>
     

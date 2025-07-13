@@ -2,51 +2,157 @@
 let courseData = [];
 let selectedCourses = [];
 let currentEditingCourse = null;
+let isAppInitialized = false;
 
+// Wait for all resources to load before initializing
+function waitForDOMAndResources() {
+    return new Promise((resolve) => {
+        if (document.readyState === 'complete') {
+            resolve();
+        } else {
+            window.addEventListener('load', resolve);
+        }
+    });
+}
 
 // Initialize the application
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    // Wait for DOM and all resources to be ready
+    await waitForDOMAndResources();
+    
+    // Prevent multiple initializations
+    if (isAppInitialized) {
+        return;
+    }
+    
+    // Ensure all required elements exist
+    if (!verifyRequiredElements()) {
+        console.error('Required DOM elements not found. Retrying in 100ms...');
+        setTimeout(() => {
+            document.dispatchEvent(new Event('DOMContentLoaded'));
+        }, 100);
+        return;
+    }
+    
+    isAppInitialized = true;
+    
+    // Hide initial loading screen
+    const loadingScreen = document.getElementById('initialLoadingScreen');
+    if (loadingScreen) {
+        loadingScreen.classList.add('hidden');
+    }
+    
+    // Show body content
+    document.body.classList.add('loaded');
+    
     initializeApp();
     setupEventListeners();
     loadFromLocalStorage();
 });
 
+// Verify all required DOM elements exist
+function verifyRequiredElements() {
+    const requiredElements = [
+        'loadDataBtn',
+        'resetBtn', 
+        'courseSearch',
+        'sectionFilter',
+        'dayFilter',
+        'exportBtn',
+        'closeModal',
+        'cancelEdit',
+        'courseForm',
+        'courseModal',
+        'loadingState',
+        'initialState',
+        'courseSelection'
+    ];
+    
+    return requiredElements.every(id => {
+        const element = document.getElementById(id);
+        if (!element) {
+            console.warn(`Required element not found: ${id}`);
+            return false;
+        }
+        return true;
+    });
+}
+
 function initializeApp() {
     // Show initial state
     showInitialState();
+    
+    // Disable browser-specific popup behaviors
+    window.addEventListener('beforeunload', function(e) {
+        // Only show confirmation if user has selected courses
+        if (selectedCourses.length > 0) {
+            const message = 'You have unsaved changes. Are you sure you want to leave?';
+            e.returnValue = message;
+            return message;
+        }
+    });
 }
 
 function setupEventListeners() {
-    // Load data button
-    document.getElementById('loadDataBtn').addEventListener('click', loadCourseData);
-    
-    // Reset button
-    document.getElementById('resetBtn').addEventListener('click', resetApplication);
-    
-    // Optimized search functionality with debouncing
-    const courseSearch = document.getElementById('courseSearch');
-    const sectionFilter = document.getElementById('sectionFilter');
-    const dayFilter = document.getElementById('dayFilter');
-    
-    courseSearch.addEventListener('input', filterCourses);
-    sectionFilter.addEventListener('change', performFilter); // Direct call for dropdowns
-    dayFilter.addEventListener('change', performFilter);
-    
-    // Export button (now shows export options)
-    document.getElementById('exportBtn').addEventListener('click', showExportOptions);
-    
-    // Modal controls
-    document.getElementById('closeModal').addEventListener('click', closeModal);
-    document.getElementById('cancelEdit').addEventListener('click', closeModal);
-    document.getElementById('courseForm').addEventListener('submit', saveCourseEdit);
-    
-    // Click outside modal to close (optimized)
-    const courseModal = document.getElementById('courseModal');
-    courseModal.addEventListener('click', function(e) {
-        if (e.target === courseModal) {
-            closeModal();
+    try {
+        // Load data button
+        const loadDataBtn = document.getElementById('loadDataBtn');
+        if (loadDataBtn) {
+            loadDataBtn.addEventListener('click', loadCourseData);
         }
-    });
+        
+        // Reset button
+        const resetBtn = document.getElementById('resetBtn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', resetApplication);
+        }
+        
+        // Search and filter elements
+        const courseSearch = document.getElementById('courseSearch');
+        const sectionFilter = document.getElementById('sectionFilter');
+        const dayFilter = document.getElementById('dayFilter');
+        
+        if (courseSearch) {
+            courseSearch.addEventListener('input', filterCourses);
+        }
+        if (sectionFilter) {
+            sectionFilter.addEventListener('change', performFilter);
+        }
+        if (dayFilter) {
+            dayFilter.addEventListener('change', performFilter);
+        }
+        
+        // Export button
+        const exportBtn = document.getElementById('exportBtn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', showExportOptions);
+        }
+        
+        // Modal controls
+        const closeModal = document.getElementById('closeModal');
+        const cancelEdit = document.getElementById('cancelEdit');
+        const courseForm = document.getElementById('courseForm');
+        const courseModal = document.getElementById('courseModal');
+        
+        if (closeModal) {
+            closeModal.addEventListener('click', closeModalHandler);
+        }
+        if (cancelEdit) {
+            cancelEdit.addEventListener('click', closeModalHandler);
+        }
+        if (courseForm) {
+            courseForm.addEventListener('submit', saveCourseEdit);
+        }
+        if (courseModal) {
+            courseModal.addEventListener('click', function(e) {
+                if (e.target === courseModal) {
+                    closeModalHandler();
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error setting up event listeners:', error);
+    }
 }
 
 // Helper functions for new API format
@@ -142,13 +248,14 @@ async function loadCourseData() {
         showCourseSelection();
         displayCourses();
         
-        // Save to localStorage
+        // Save to localStorage with timestamp
         localStorage.setItem('courseData', JSON.stringify(courseData));
+        localStorage.setItem('courseDataTimestamp', Date.now().toString());
         
     } catch (error) {
         console.error('Error loading course data:', error);
-        alert('Failed to load course data. Please try again.');
-        showInitialState();
+        showNotification('Failed to load course data. Please check your internet connection and try again.', 'error');
+        showInitialStateReady(); // Show manual reload option on error
     }
 }
 
@@ -424,7 +531,7 @@ function addCourse(courseId) {
     
     // Check if regular course is already selected
     if (selectedCourses.find(c => c.id == courseId && !c.isLabOnly)) {
-        alert('This course is already selected!');
+        showNotification('This course is already selected!', 'error');
         return;
     }
     
@@ -461,7 +568,7 @@ function addLabCourse(courseId) {
     
     // Check if lab course is already selected
     if (selectedCourses.find(c => c.id == courseId && c.isLabOnly)) {
-        alert('This lab is already selected!');
+        showNotification('This lab is already selected!', 'error');
         return;
     }
     
@@ -615,28 +722,98 @@ function saveCourseEdit(e) {
     
     updateSelectedCoursesDisplay();
     saveToLocalStorage();
-    closeModal();
+    closeModalHandler();
     
     showNotification('Course updated successfully!', 'success');
 }
 
 function removeCourse(index) {
-    if (confirm('Are you sure you want to remove this course?')) {
+    showConfirmationModal('Confirm Removal', 'Are you sure you want to remove this course?', 'Remove Course', () => {
         selectedCourses.splice(index, 1);
         updateSelectedCoursesDisplay();
         saveToLocalStorage();
         showNotification('Course removed successfully!', 'success');
+    });
+}
+
+// Custom confirmation modal to replace browser confirms
+function showConfirmationModal(title, message, confirmText, onConfirm, cancelText = 'Cancel') {
+    // Remove any existing confirmation modals
+    const existingModals = document.querySelectorAll('.confirmation-modal');
+    existingModals.forEach(modal => modal.remove());
+    
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 confirmation-modal';
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">
+                <i class="fas fa-question-circle text-yellow-600 mr-2"></i>${title}
+            </h3>
+            <p class="text-gray-600 mb-6">${message}</p>
+            
+            <div class="flex flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+                <button onclick="closeConfirmationModal(this)" 
+                        class="w-full sm:w-auto bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors">
+                    ${cancelText}
+                </button>
+                <button onclick="confirmAndClose(this)" 
+                        class="w-full sm:w-auto bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">
+                    ${confirmText}
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Store the callback function
+    modal.onConfirm = onConfirm;
+    
+    document.body.appendChild(modal);
+    
+    // Clean up when modal is closed
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeConfirmationModal(modal);
+        }
+    });
+    
+    // Add escape key support
+    const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+            closeConfirmationModal(modal);
+            document.removeEventListener('keydown', handleEscape);
+        }
+    };
+    document.addEventListener('keydown', handleEscape);
+}
+
+function confirmAndClose(button) {
+    const modal = button.closest('.confirmation-modal');
+    if (modal && modal.onConfirm) {
+        modal.onConfirm();
+    }
+    closeConfirmationModal(modal);
+}
+
+function closeConfirmationModal(element) {
+    const modal = element.closest ? element.closest('.confirmation-modal') : element;
+    if (modal && modal.parentElement) {
+        modal.parentElement.removeChild(modal);
     }
 }
 
-function closeModal() {
-    document.getElementById('courseModal').classList.add('hidden');
-    document.getElementById('courseModal').classList.remove('flex');
+// Remove the old closeModal function as we now use closeModalHandler
+
+function closeModalHandler() {
+    const courseModal = document.getElementById('courseModal');
+    if (courseModal) {
+        courseModal.classList.add('hidden');
+        courseModal.classList.remove('flex');
+    }
     currentEditingCourse = null;
 }
 
 function resetApplication() {
-    if (confirm('Are you sure you want to reset everything? This will clear all selected courses.')) {
+    showConfirmationModal('Confirm Reset', 'Are you sure you want to reset everything? This will clear all selected courses.', 'Reset Application', () => {
         selectedCourses = [];
         courseData = [];
         currentEditingCourse = null;
@@ -644,13 +821,14 @@ function resetApplication() {
         // Clear localStorage
         localStorage.removeItem('selectedCourses');
         localStorage.removeItem('courseData');
+        localStorage.removeItem('courseDataTimestamp');
         
-        // Reset UI
+        // Reset UI and reload fresh data
         updateSelectedCoursesDisplay();
-        showInitialState();
+        loadCourseData(); // Automatically reload data after reset
         
-        showNotification('Application reset successfully!', 'info');
-    }
+        showNotification('Application reset successfully! Reloading course data...', 'info');
+    });
 }
 
 // Calendar Export Functions
@@ -658,7 +836,7 @@ function resetApplication() {
 // Export as .ics file (works with Google Calendar, Outlook, Apple Calendar, etc.)
 function exportToCalendarFile() {
     if (selectedCourses.length === 0) {
-        alert('Please select at least one course to export.');
+        showNotification('Please select at least one course to export.', 'error');
         return;
     }
     
@@ -710,7 +888,7 @@ function generateICSFile() {
 // Export to Google Calendar via URL (bulk method)
 function exportToGoogleCalendarURL() {
     if (selectedCourses.length === 0) {
-        alert('Please select at least one course to export.');
+        showNotification('Please select at least one course to export.', 'error');
         return;
     }
     
@@ -787,28 +965,31 @@ function showBulkImportModal(googleCalendarURLs) {
 function openAllGoogleCalendarTabs(urls) {
     if (!Array.isArray(urls)) {
         console.error('URLs must be an array');
-        alert('Error: Expected an array of URLs but received: ' + typeof urls);
+        showNotification('Error: Invalid URL format received. Please try again.', 'error');
         return;
     }
     
     if (urls.length === 0) {
-        alert('No events to export. Please make sure your courses have valid schedules.');
+        showNotification('No events to export. Please make sure your courses have valid schedules.', 'error');
         return;
     }
     
-    // Show confirmation dialog with the number of tabs
-    if (!confirm(`This will open ${urls.length} tabs in your browser. Continue?`)) {
-        return;
-    }
-    
-    // Open tabs with a delay to prevent popup blocking
-    urls.forEach((url, index) => {
-        setTimeout(() => {
-            window.open(url, '_blank');
-        }, index * 750); // 750ms delay between each tab
-    });
-    
-    showNotification(`Opening ${urls.length} Google Calendar tabs...`, 'info');
+    // Show confirmation modal instead of browser confirm
+    showConfirmationModal(
+        'Open Calendar Tabs',
+        `This will open ${urls.length} tabs in your browser. Your browser may block some popups, so please allow them when prompted.`,
+        'Continue',
+        () => {
+            // Open tabs with a delay to prevent popup blocking
+            urls.forEach((url, index) => {
+                setTimeout(() => {
+                    window.open(url, '_blank');
+                }, index * 750); // 750ms delay between each tab
+            });
+            
+            showNotification(`Opening ${urls.length} Google Calendar tabs...`, 'info');
+        }
+    );
 }
 
 
@@ -818,7 +999,7 @@ function openAllGoogleCalendarTabs(urls) {
 // Export options modal
 function showExportOptions() {
     if (selectedCourses.length === 0) {
-        alert('Please select at least one course to export.');
+        showNotification('Please select at least one course to export.', 'error');
         return;
     }
     
@@ -1051,7 +1232,7 @@ function createGoogleCalendarURL(course, dayName, startTime, endTime) {
 
 function copyCalendarText() {
     if (selectedCourses.length === 0) {
-        alert('No courses selected to copy.');
+        showNotification('No courses selected to copy.', 'error');
         return;
     }
     
@@ -1203,28 +1384,61 @@ function closeModalAndRemove(element) {
 }
 
 function showLoading() {
-    document.getElementById('loadingState').classList.remove('hidden');
-    document.getElementById('initialState').classList.add('hidden');
-    document.getElementById('courseSelection').classList.add('hidden');
+    const loadingState = document.getElementById('loadingState');
+    const initialState = document.getElementById('initialState');
+    const courseSelection = document.getElementById('courseSelection');
+    
+    if (loadingState) loadingState.classList.remove('hidden');
+    if (initialState) initialState.classList.add('hidden');
+    if (courseSelection) courseSelection.classList.add('hidden');
 }
 
 function showInitialState() {
-    document.getElementById('loadingState').classList.add('hidden');
-    document.getElementById('initialState').classList.remove('hidden');
-    document.getElementById('courseSelection').classList.add('hidden');
+    const loadingState = document.getElementById('loadingState');
+    const initialState = document.getElementById('initialState');
+    const courseSelection = document.getElementById('courseSelection');
+    
+    if (loadingState) loadingState.classList.add('hidden');
+    if (initialState) initialState.classList.remove('hidden');
+    if (courseSelection) courseSelection.classList.add('hidden');
+    
+    // Show appropriate loading state elements
+    const autoLoadingIndicator = document.getElementById('autoLoadingIndicator');
+    const manualLoadBtn = document.getElementById('manualLoadBtn');
+    
+    if (autoLoadingIndicator) autoLoadingIndicator.classList.remove('hidden');
+    if (manualLoadBtn) manualLoadBtn.classList.add('hidden');
+}
+
+function showInitialStateReady() {
+    // Show initial state with manual reload option (after auto-load completes)
+    const autoLoadingIndicator = document.getElementById('autoLoadingIndicator');
+    const manualLoadBtn = document.getElementById('manualLoadBtn');
+    
+    if (autoLoadingIndicator) autoLoadingIndicator.classList.add('hidden');
+    if (manualLoadBtn) manualLoadBtn.classList.remove('hidden');
 }
 
 function showCourseSelection() {
-    document.getElementById('loadingState').classList.add('hidden');
-    document.getElementById('initialState').classList.add('hidden');
-    document.getElementById('courseSelection').classList.remove('hidden');
+    const loadingState = document.getElementById('loadingState');
+    const initialState = document.getElementById('initialState');
+    const courseSelection = document.getElementById('courseSelection');
+    
+    if (loadingState) loadingState.classList.add('hidden');
+    if (initialState) initialState.classList.add('hidden');
+    if (courseSelection) courseSelection.classList.remove('hidden');
 }
 
 function showNotification(message, type = 'info') {
+    // Prevent showing notifications if the page is not visible or not ready
+    if (document.hidden || !isAppInitialized) {
+        return;
+    }
+    
     const notification = document.createElement('div');
     const isMobile = window.innerWidth < 640;
     
-    notification.className = `fixed z-50 p-3 sm:p-4 rounded-lg text-white text-sm sm:text-base ${
+    notification.className = `fixed z-50 p-3 sm:p-4 rounded-lg text-white text-sm sm:text-base transition-all duration-300 transform translate-y-0 ${
         isMobile ? 'top-4 left-3 right-3' : 'top-4 right-4'
     } ${type === 'success' ? 'bg-green-600' : 
         type === 'error' ? 'bg-red-600' : 'bg-blue-600'
@@ -1239,36 +1453,70 @@ function showNotification(message, type = 'info') {
         </div>
     `;
     
+    // Add with animation
+    notification.style.transform = 'translateY(-100%)';
     document.body.appendChild(notification);
     
-    // Auto remove after 4 seconds on mobile, 3 seconds on desktop
+    // Trigger animation
+    setTimeout(() => {
+        notification.style.transform = 'translateY(0)';
+    }, 10);
+    
+    // Auto remove after timeout
+    const timeout = type === 'error' ? 5000 : (isMobile ? 4000 : 3000);
     setTimeout(() => {
         if (notification.parentElement) {
-            notification.remove();
+            notification.style.transform = 'translateY(-100%)';
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 300);
         }
-    }, isMobile ? 4000 : 3000);
+    }, timeout);
 }
 
 // Local Storage functions
 function saveToLocalStorage() {
-    localStorage.setItem('selectedCourses', JSON.stringify(selectedCourses));
+    try {
+        localStorage.setItem('selectedCourses', JSON.stringify(selectedCourses));
+    } catch (error) {
+        console.error('Error saving to localStorage:', error);
+    }
 }
 
 function loadFromLocalStorage() {
-    const savedCourses = localStorage.getItem('selectedCourses');
-    const savedData = localStorage.getItem('courseData');
-    
-    if (savedCourses) {
-        selectedCourses = JSON.parse(savedCourses);
-        updateSelectedCoursesDisplay();
-    }
-    
-    if (savedData) {
-        courseData = JSON.parse(savedData);
-        populateFilters();
-        showCourseSelection();
-        displayCourses();
-    } else {
+    try {
+        const savedCourses = localStorage.getItem('selectedCourses');
+        const savedData = localStorage.getItem('courseData');
+        
+        if (savedCourses) {
+            selectedCourses = JSON.parse(savedCourses);
+            updateSelectedCoursesDisplay();
+        }
+        
+        if (savedData) {
+            // Check if cached data is recent (less than 1 hour old)
+            const cacheTimestamp = localStorage.getItem('courseDataTimestamp');
+            const oneHourAgo = Date.now() - (60 * 60 * 1000);
+            
+            if (cacheTimestamp && parseInt(cacheTimestamp) > oneHourAgo) {
+                // Use cached data if it's recent
+                courseData = JSON.parse(savedData);
+                populateFilters();
+                showCourseSelection();
+                displayCourses();
+            } else {
+                // Cache is old, fetch fresh data
+                loadCourseData();
+            }
+        } else {
+            // No cached data, automatically load fresh data
+            loadCourseData();
+        }
+    } catch (error) {
+        console.error('Error loading from localStorage:', error);
+        // If there's an error with cached data, fall back to loading fresh data
         loadCourseData();
     }
 }
