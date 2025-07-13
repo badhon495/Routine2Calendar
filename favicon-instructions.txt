@@ -1,0 +1,15 @@
+# Favicon placeholder
+# In production, you should replace this with a proper favicon.ico file
+# You can generate one from your SVG icon using online tools like:
+# - https://favicon.io/
+# - https://realfavicongenerator.net/
+# - https://www.favicon-generator.org/
+
+# For now, the SVG favicon in the HTML works for modern browsers
+# But a favicon.ico is still recommended for older browsers and better compatibility
+
+# Instructions:
+# 1. Convert your R2C logo SVG to a 32x32 PNG
+# 2. Use an online ICO converter to create favicon.ico
+# 3. Replace this file with the generated favicon.ico
+# 4. Ensure it's in the root directory of your website

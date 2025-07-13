@@ -3,6 +3,7 @@ let courseData = [];
 let selectedCourses = [];
 let currentEditingCourse = null;
 
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
@@ -22,10 +23,14 @@ function setupEventListeners() {
     // Reset button
     document.getElementById('resetBtn').addEventListener('click', resetApplication);
     
-    // Search functionality
-    document.getElementById('courseSearch').addEventListener('input', filterCourses);
-    document.getElementById('sectionFilter').addEventListener('change', filterCourses);
-    document.getElementById('dayFilter').addEventListener('change', filterCourses);
+    // Optimized search functionality with debouncing
+    const courseSearch = document.getElementById('courseSearch');
+    const sectionFilter = document.getElementById('sectionFilter');
+    const dayFilter = document.getElementById('dayFilter');
+    
+    courseSearch.addEventListener('input', filterCourses);
+    sectionFilter.addEventListener('change', performFilter); // Direct call for dropdowns
+    dayFilter.addEventListener('change', performFilter);
     
     // Export button (now shows export options)
     document.getElementById('exportBtn').addEventListener('click', showExportOptions);
@@ -35,9 +40,10 @@ function setupEventListeners() {
     document.getElementById('cancelEdit').addEventListener('click', closeModal);
     document.getElementById('courseForm').addEventListener('submit', saveCourseEdit);
     
-    // Click outside modal to close
-    document.getElementById('courseModal').addEventListener('click', function(e) {
-        if (e.target === this) {
+    // Click outside modal to close (optimized)
+    const courseModal = document.getElementById('courseModal');
+    courseModal.addEventListener('click', function(e) {
+        if (e.target === courseModal) {
             closeModal();
         }
     });
@@ -83,8 +89,6 @@ async function loadCourseData() {
         const titleResponse = await fetch('https://usis-cdn.eniamza.com/usisdump.json');
         const titleData = await titleResponse.json();
         
-        console.log('Title data sample:', titleData.slice(0, 3)); // Debug: show first 3 entries
-        
         // Create a map of course codes to course titles
         const courseTitleMap = {};
         titleData.forEach(course => {
@@ -93,21 +97,28 @@ async function loadCourseData() {
             }
         });
         
-        console.log('Total course titles mapped:', Object.keys(courseTitleMap).length); // Debug
-        console.log('Sample mappings:', Object.entries(courseTitleMap).slice(0, 5)); // Debug
-        
         courseData = data.map(course => {
             const mappedTitle = courseTitleMap[course.courseCode];
+            const classSchedule = formatScheduleFromAPI(course.preRegSchedule);
+            const classLabSchedule = formatScheduleFromAPI(course.preRegLabSchedule || '');
+            
+            // Pre-compute searchable strings and schedule days
+            const courseTitle = mappedTitle || course.courseCode;
+            const searchableCode = course.courseCode.toLowerCase();
+            const searchableTitle = courseTitle.toLowerCase();
+            
+            // Extract and cache schedule days
+            const scheduleDays = extractScheduleDays(classSchedule);
             
             return {
                 id: course.sectionId,
                 courseCode: course.courseCode,
-                courseTitle: mappedTitle || course.courseCode,
+                courseTitle: courseTitle,
                 empName: course.faculties || 'TBA',
                 empShortName: course.faculties || 'TBA',
                 deptName: getDepartmentFromCode(course.courseCode),
-                classSchedule: formatScheduleFromAPI(course.preRegSchedule),
-                classLabSchedule: formatScheduleFromAPI(course.preRegLabSchedule || ''),
+                classSchedule: classSchedule,
+                classLabSchedule: classLabSchedule,
                 courseCredit: course.courseCredit,
                 availableSeat: course.capacity - course.consumedSeat,
                 totalFillupSeat: course.consumedSeat,
@@ -119,11 +130,13 @@ async function loadCourseData() {
                 roomName: course.roomName,
                 academicDegree: course.academicDegree,
                 labName: course.labName || null,
-                labRoomName: course.labRoomName || null
+                labRoomName: course.labRoomName || null,
+                // Cached data for performance
+                _searchableCode: searchableCode,
+                _searchableTitle: searchableTitle,
+                _scheduleDays: scheduleDays
             };
         });
-        
-        console.log('Sample processed course:', courseData[0]); // Debug: show first processed course
         
         populateFilters();
         showCourseSelection();
@@ -147,25 +160,40 @@ function populateFilters() {
 
 function populateSectionFilter(filteredCourses) {
     const sectionFilter = document.getElementById('sectionFilter');
-    const sections = [...new Set(filteredCourses.map(course => course.sectionName))].sort();
-    
-    // Store current selection
     const currentSelection = sectionFilter.value;
     
-    sectionFilter.innerHTML = '<option value="">All Sections</option>';
+    // Use Set for O(1) lookup and automatic deduplication
+    const sectionsSet = new Set();
+    filteredCourses.forEach(course => sectionsSet.add(course.sectionName));
+    const sections = Array.from(sectionsSet).sort();
     
-    if (sections.length > 0) {
-        sections.forEach(section => {
-            const option = document.createElement('option');
-            option.value = section;
-            option.textContent = `Section ${section}`;
-            sectionFilter.appendChild(option);
-        });
-        
-        // Restore selection if it still exists
-        if (sections.includes(currentSelection)) {
-            sectionFilter.value = currentSelection;
-        }
+    // Only update if sections changed to avoid unnecessary DOM updates
+    const currentOptions = Array.from(sectionFilter.options).slice(1).map(option => option.value);
+    if (JSON.stringify(currentOptions) === JSON.stringify(sections)) {
+        return; // No change needed, exit early
+    }
+    
+    // Build new options
+    const fragment = document.createDocumentFragment();
+    const allOption = document.createElement('option');
+    allOption.value = '';
+    allOption.textContent = 'All Sections';
+    fragment.appendChild(allOption);
+    
+    sections.forEach(section => {
+        const option = document.createElement('option');
+        option.value = section;
+        option.textContent = `Section ${section}`;
+        fragment.appendChild(option);
+    });
+    
+    // Replace all options at once
+    sectionFilter.innerHTML = '';
+    sectionFilter.appendChild(fragment);
+    
+    // Restore selection if it still exists
+    if (sections.includes(currentSelection)) {
+        sectionFilter.value = currentSelection;
     }
 }
 
@@ -173,105 +201,157 @@ function populateDayFilter() {
     const dayFilter = document.getElementById('dayFilter');
     const days = new Set();
     
+    // Use cached schedule days instead of parsing each time
     courseData.forEach(course => {
-        if (course.classSchedule) {
-            const separator = course.classSchedule.includes('\n') ? '\n' : ',';
-            const dayMatches = course.classSchedule.split(separator);
-            dayMatches.forEach(daySchedule => {
-                const match = daySchedule.match(/(\w+)\(/);
-                if (match) {
-                    const dayName = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
-                    days.add(dayName);
-                }
-            });
+        if (course._scheduleDays) {
+            course._scheduleDays.forEach(day => days.add(day));
         }
     });
     
     const sortedDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
         .filter(day => days.has(day));
     
-    dayFilter.innerHTML = '<option value="">All Days</option>';
+    // Build options using fragment
+    const fragment = document.createDocumentFragment();
+    
+    const allOption = document.createElement('option');
+    allOption.value = '';
+    allOption.textContent = 'All Days';
+    fragment.appendChild(allOption);
+    
     sortedDays.forEach(day => {
         const option = document.createElement('option');
         option.value = day;
         option.textContent = day;
-        dayFilter.appendChild(option);
+        fragment.appendChild(option);
     });
+    
+    dayFilter.innerHTML = '';
+    dayFilter.appendChild(fragment);
 }
 
+// Debounce search to improve performance
+let searchTimeout;
 function filterCourses() {
-    const searchTerm = document.getElementById('courseSearch').value.toLowerCase();
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        performFilter();
+    }, 150);
+}
+
+function performFilter() {
+    const searchTerm = document.getElementById('courseSearch').value.toLowerCase().trim();
     const selectedSection = document.getElementById('sectionFilter').value;
     const selectedDay = document.getElementById('dayFilter').value;
     
     let filteredCourses = courseData;
     
-    // First filter by search term (course code or title)
+    // Use cached searchable strings
     if (searchTerm) {
         filteredCourses = filteredCourses.filter(course => 
-            course.courseCode.toLowerCase().includes(searchTerm) ||
-            course.courseTitle.toLowerCase().includes(searchTerm)
+            course._searchableCode.includes(searchTerm) ||
+            course._searchableTitle.includes(searchTerm)
         );
     }
     
     // Update section filter based on search results
-    // If no search term, show all sections; otherwise show only relevant sections
-    populateSectionFilter(searchTerm ? filteredCourses : []);
+    if (searchTerm) {
+        populateSectionFilter(filteredCourses);
+    }
     
-    // Then filter by section
+    // Filter by section
     if (selectedSection) {
         filteredCourses = filteredCourses.filter(course => course.sectionName === selectedSection);
     }
     
-    // Finally filter by day
+    // Filter by day using cached data
     if (selectedDay) {
-        filteredCourses = filteredCourses.filter(course => {
-            if (!course.classSchedule) return false;
-            const separator = course.classSchedule.includes('\n') ? '\n' : ',';
-            const dayMatches = course.classSchedule.split(separator);
-            return dayMatches.some(daySchedule => {
-                const match = daySchedule.match(/(\w+)\(/);
-                if (match) {
-                    const dayName = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
-                    return dayName === selectedDay;
-                }
-                return false;
-            });
-        });
+        filteredCourses = filteredCourses.filter(course => course._scheduleDays?.includes(selectedDay));
     }
     
     displayCourses(filteredCourses);
 }
 
+// Optimized display with document fragments for better performance
 function displayCourses(courses = courseData) {
     const searchResults = document.getElementById('searchResults');
+    
+    // Use document fragment for better performance
+    const fragment = document.createDocumentFragment();
+    
+    // Group courses by course code (optimized)
+    const groupedCourses = new Map();
+    courses.forEach(course => {
+        if (!groupedCourses.has(course.courseCode)) {
+            groupedCourses.set(course.courseCode, []);
+        }
+        groupedCourses.get(course.courseCode).push(course);
+    });
+    
+    // Clear existing content once
     searchResults.innerHTML = '';
     
-    // Group courses by course code
-    const groupedCourses = {};
-    courses.forEach(course => {
-        if (!groupedCourses[course.courseCode]) {
-            groupedCourses[course.courseCode] = [];
-        }
-        groupedCourses[course.courseCode].push(course);
+    // Create course cards and append to fragment
+    groupedCourses.forEach((sections, courseCode) => {
+        const courseCard = createCourseCard(courseCode, sections);
+        fragment.appendChild(courseCard);
     });
     
-    Object.entries(groupedCourses).forEach(([courseCode, sections]) => {
-        const courseCard = createCourseCard(courseCode, sections);
-        searchResults.appendChild(courseCard);
-    });
+    // Single DOM update
+    searchResults.appendChild(fragment);
 }
 
+// Optimized course card creation
 function createCourseCard(courseCode, sections) {
     const card = document.createElement('div');
     card.className = 'course-card bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 fade-in';
     
     const firstSection = sections[0];
     const scheduleText = parseSchedule(firstSection.classSchedule);
+    const courseTitle = firstSection.courseTitle;
     
-    // Get course title - show the actual course title from API
-    let courseTitle = firstSection.courseTitle;
+    // Pre-build section HTML to avoid multiple DOM updates
+    const sectionsHTML = sections.map(section => {
+        const hasLab = section.labName && section.classLabSchedule;
+        const labScheduleText = hasLab ? parseSchedule(section.classLabSchedule) : '';
+        
+        return `
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 space-y-2 sm:space-y-0">
+                        <div class="flex-1 min-w-0">
+                            <span class="font-medium text-gray-900 block break-words">Section ${section.sectionName} - ${section.roomName || 'TBA'}</span>
+                            <p class="text-sm text-gray-600 break-words">${section.empName}</p>
+                        </div>
+                        <div class="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                            <span class="text-xs text-gray-500 text-center sm:text-right">
+                                ${section.availableSeat}/${section.defaultSeatCapacity} available
+                            </span>
+                            <button onclick="addCourse('${section.id}')" 
+                                    class="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition-colors w-full sm:w-auto">
+                                Add Course
+                            </button>
+                        </div>
+                    </div>
+                    ${hasLab ? `
+                    <div class="mt-3 pt-3 border-t border-gray-200">
+                        <div class="bg-green-50 rounded p-2">
+                            <div class="flex items-center mb-1">
+                                <i class="fas fa-flask text-green-600 mr-2 shrink-0"></i>
+                                <span class="text-sm font-medium text-green-800 break-words">Lab: ${section.labName}</span>
+                            </div>
+                            <p class="text-xs text-green-700 break-words">Room: ${section.labRoomName || 'TBA'}</p>
+                            <p class="text-xs text-green-700 break-words">Schedule: ${labScheduleText}</p>
+                            <button onclick="addLabCourse('${section.id}')" 
+                                    class="mt-2 bg-green-600 text-white px-3 py-2 rounded text-xs hover:bg-green-700 transition-colors w-full sm:w-auto">
+                                Add Lab Only
+                            </button>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>`;
+    }).join('');
     
+    // Single innerHTML update
     card.innerHTML = `
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 space-y-2 sm:space-y-0">
             <div class="flex-1 min-w-0">
@@ -291,58 +371,24 @@ function createCourseCard(courseCode, sections) {
         </div>
         
         <div class="space-y-2">
-            ${sections.map(section => {
-                const hasLab = section.labName && section.classLabSchedule;
-                const labScheduleText = hasLab ? parseSchedule(section.classLabSchedule) : '';
-                
-                return `
-                <div class="bg-gray-50 rounded-lg p-3">
-                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 space-y-2 sm:space-y-0">
-                        <div class="flex-1 min-w-0">
-                            <span class="font-medium text-gray-900 block break-words">Section ${section.sectionName} - ${section.roomName || 'TBA'}</span>
-                            <p class="text-sm text-gray-600 break-words">${section.empName}</p>
-                        </div>
-                        <div class="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-                            <span class="text-xs text-gray-500 text-center sm:text-right">
-                                ${section.availableSeat}/${section.defaultSeatCapacity} available
-                            </span>
-                            <button onclick="addCourse('${section.id}')" 
-                                    class="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition-colors w-full sm:w-auto">
-                                Add Course
-                            </button>
-                        </div>
-                    </div>
-                    
-                    ${hasLab ? `
-                    <div class="mt-3 pt-3 border-t border-gray-200">
-                        <div class="bg-green-50 rounded p-2">
-                            <div class="flex items-center mb-1">
-                                <i class="fas fa-flask text-green-600 mr-2 shrink-0"></i>
-                                <span class="text-sm font-medium text-green-800 break-words">Lab: ${section.labName}</span>
-                            </div>
-                            <p class="text-xs text-green-700 break-words">Room: ${section.labRoomName || 'TBA'}</p>
-                            <p class="text-xs text-green-700 break-words">Schedule: ${labScheduleText}</p>
-                            <button onclick="addLabCourse('${section.id}')" 
-                                    class="mt-2 bg-green-600 text-white px-3 py-2 rounded text-xs hover:bg-green-700 transition-colors w-full sm:w-auto">
-                                Add Lab Only
-                            </button>
-                        </div>
-                    </div>
-                    ` : ''}
-                </div>
-            `;
-            }).join('')}
+            ${sectionsHTML}
         </div>
     `;
     
     return card;
 }
 
+// Cache object for performance optimization
+const scheduleCache = new Map();
+
 function parseSchedule(schedule) {
     if (!schedule) return 'Schedule TBA';
     
-    // Parse schedule string like "Sunday(08:00 AM-09:20 AM-UB0000),Tuesday(08:00 AM-09:20 AM-UB0000)"
-    // or new format "SUNDAY(8:00 AM-9:20 AM-10B-18C)\nTUESDAY(8:00 AM-9:20 AM-10B-18C)"
+    // Use cache to avoid repeated parsing
+    if (scheduleCache.has(schedule)) {
+        return scheduleCache.get(schedule);
+    }
+    
     const separator = schedule.includes('\n') ? '\n' : ',';
     const days = schedule.split(separator).map(day => {
         const match = day.match(/(\w+)\((.+)\)/);
@@ -351,7 +397,6 @@ function parseSchedule(schedule) {
             const timeRoom = match[2];
             const timeMatch = timeRoom.match(/(\d{1,2}:\d{2} [AP]M)-(\d{1,2}:\d{2} [AP]M)/);
             if (timeMatch) {
-                // Capitalize first letter only for day name
                 const formattedDay = dayName.charAt(0).toUpperCase() + dayName.slice(1).toLowerCase();
                 return `${formattedDay} ${timeMatch[1]}-${timeMatch[2]}`;
             }
@@ -359,7 +404,9 @@ function parseSchedule(schedule) {
         return day;
     });
     
-    return days.join(', ');
+    const result = days.join(', ');
+    scheduleCache.set(schedule, result);
+    return result;
 }
 
 function extractRoomFromSchedule(schedule) {
@@ -427,7 +474,7 @@ function addLabCourse(courseId) {
     // Add editable fields to the lab course
     const editableLabCourse = {
         ...course,
-        editableCourseName: course.courseCode + '_Lab',
+        editableCourseName: course.labName ? course.courseCode : course.courseCode + '_Lab',
         editableCourseTitle: course.labName || course.courseTitle + ' Lab',
         editableFacultyName: course.empName,
         editableRoomNumber: course.labRoomName || 'Lab TBA',
@@ -445,6 +492,7 @@ function addLabCourse(courseId) {
     showNotification('Lab course added successfully!', 'success');
 }
 
+// Optimized selected courses display
 function updateSelectedCoursesDisplay() {
     const container = document.getElementById('selectedCoursesList');
     const section = document.getElementById('selectedCourses');
@@ -455,12 +503,18 @@ function updateSelectedCoursesDisplay() {
     }
     
     section.classList.remove('hidden');
-    container.innerHTML = '';
+    
+    // Use document fragment for better performance
+    const fragment = document.createDocumentFragment();
     
     selectedCourses.forEach((course, index) => {
         const courseElement = createSelectedCourseElement(course, index);
-        container.appendChild(courseElement);
+        fragment.appendChild(courseElement);
     });
+    
+    // Single DOM update
+    container.innerHTML = '';
+    container.appendChild(fragment);
 }
 
 function createSelectedCourseElement(course, index) {
@@ -599,7 +653,7 @@ function resetApplication() {
     }
 }
 
-// Calendar Export Functions - No API Key Required!
+// Calendar Export Functions
 
 // Export as .ics file (works with Google Calendar, Outlook, Apple Calendar, etc.)
 function exportToCalendarFile() {
@@ -615,7 +669,7 @@ function exportToCalendarFile() {
     showImportInstructions();
 }
 
-// Generate ICS (iCalendar) file content - IMPROVED for bulk import
+// Generate ICS file content for bulk import
 function generateICSFile() {
     const events = [];
     
@@ -653,7 +707,7 @@ function generateICSFile() {
     return icsContent.join('\r\n');
 }
 
-// Alternative: Export to Google Calendar via URL (no API needed) - BULK METHOD
+// Export to Google Calendar via URL (bulk method)
 function exportToGoogleCalendarURL() {
     if (selectedCourses.length === 0) {
         alert('Please select at least one course to export.');
@@ -673,6 +727,9 @@ function exportToGoogleCalendarURL() {
 }
 
 function showBulkImportModal(googleCalendarURLs) {
+    // Store URLs globally so we can access them from the modal
+    window.pendingGoogleCalendarURLs = googleCalendarURLs;
+    
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50';
     modal.innerHTML = `
@@ -689,21 +746,35 @@ function showBulkImportModal(googleCalendarURLs) {
                 </p>
             </div>
             
+            <div class="bg-red-50 p-3 rounded-lg border border-red-200 mb-4">
+                <p class="text-xs text-red-700 font-medium">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                    <strong>Important:</strong> You should allow all the popups opened by this tab for the import to work properly.
+                </p>
+            </div>
+            
+            <div class="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
+                <p class="text-xs text-blue-700">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    <strong>Note:</strong> Google Calendar URL import doesn't support automatic reminders. You'll need to set the ${getNotificationTimeText(getNotificationTime())} reminder manually for each event, or use the .ics file method below for automatic reminders.
+                </p>
+            </div>
+            
             <div class="space-y-3">
-                <button onclick="openAllGoogleCalendarTabs(${JSON.stringify(googleCalendarURLs).replace(/"/g, '&quot;')}); document.body.removeChild(this.closest('.fixed'))" 
+                <button onclick="openAllGoogleCalendarTabs(window.pendingGoogleCalendarURLs); closeModalAndRemove(this)" 
                         class="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition-colors">
                     <i class="fas fa-calendar-plus mr-2"></i>
                     Import All Events (${googleCalendarURLs.length} events)
                 </button>
                 
-                <button onclick="exportToCalendarFile(); document.body.removeChild(this.closest('.fixed'))" 
+                <button onclick="exportToCalendarFile(); closeModalAndRemove(this)" 
                         class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-colors">
                     <i class="fas fa-download mr-2"></i>
                     Download .ics File Instead (Recommended)
                 </button>
             </div>
             
-            <button onclick="document.body.removeChild(this.closest('.fixed'))" 
+            <button onclick="closeModalAndRemove(this)" 
                     class="w-full mt-4 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors">
                 Cancel
             </button>
@@ -716,6 +787,17 @@ function showBulkImportModal(googleCalendarURLs) {
 function openAllGoogleCalendarTabs(urls) {
     if (!Array.isArray(urls)) {
         console.error('URLs must be an array');
+        alert('Error: Expected an array of URLs but received: ' + typeof urls);
+        return;
+    }
+    
+    if (urls.length === 0) {
+        alert('No events to export. Please make sure your courses have valid schedules.');
+        return;
+    }
+    
+    // Show confirmation dialog with the number of tabs
+    if (!confirm(`This will open ${urls.length} tabs in your browser. Continue?`)) {
         return;
     }
     
@@ -729,134 +811,9 @@ function openAllGoogleCalendarTabs(urls) {
     showNotification(`Opening ${urls.length} Google Calendar tabs...`, 'info');
 }
 
-function createBulkGoogleCalendarEvent() {
-    // Create a single comprehensive event with all course schedules
-    const allSchedules = selectedCourses.map(course => {
-        const scheduleText = parseSchedule(course.classSchedule);
-        return `${course.editableCourseName} (${course.eventType}): ${scheduleText} - Room: ${course.editableRoomNumber} - ${course.editableFacultyName}`;
-    }).join('\\n\\n');
-    
-    const title = `BRACU Schedule - ${selectedCourses.length} Courses`;
-    const details = `BRAC University Class Schedule\\n\\n${allSchedules}\\n\\nGenerated by Routine2Calendar`;
-    const location = 'BRAC University, 66 Mohakhali, Dhaka 1212';
-    
-    // Use next Monday as start date for the semester
-    const today = new Date();
-    const nextMonday = getNextDayOccurrence(today, 1); // 1 = Monday
-    
-    // Set to 8:00 AM
-    nextMonday.setHours(8, 0, 0, 0);
-    const endTime = new Date(nextMonday);
-    endTime.setHours(17, 0, 0, 0); // 5:00 PM
-    
-    const startFormatted = formatDateForGoogle(nextMonday);
-    const endFormatted = formatDateForGoogle(endTime);
-    
-    const params = new URLSearchParams({
-        action: 'TEMPLATE',
-        text: title,
-        dates: `${startFormatted}/${endFormatted}`,
-        details: details,
-        location: location,
-        recur: 'RRULE:FREQ=WEEKLY;COUNT=15' // 15 weeks semester
-    });
-    
-    return `https://calendar.google.com/calendar/render?${params.toString()}`;
-}
 
-// Better approach: Create a shareable calendar URL or use calendar subscription
-function createShareableCalendar() {
-    if (selectedCourses.length === 0) {
-        alert('Please select at least one course to export.');
-        return;
-    }
-    
-    // Generate a unique calendar feed URL (would need backend implementation)
-    const scheduleId = generateScheduleId();
-    
-    // Create individual Google Calendar events for better import
-    const googleCalendarURLs = [];
-    
-    selectedCourses.forEach(course => {
-        const events = parseScheduleForGoogleURL(course);
-        googleCalendarURLs.push(...events);
-    });
-    
-    showShareableOptions(googleCalendarURLs, scheduleId);
-}
 
-function generateScheduleId() {
-    // Generate a unique ID based on selected courses
-    const courseIds = selectedCourses.map(c => c.id).sort().join(',');
-    return btoa(courseIds).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
-}
 
-function showShareableOptions(googleCalendarURLs, scheduleId) {
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50';
-    modal.innerHTML = `
-        <div class="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
-            <h3 class="text-lg font-bold text-gray-900 mb-4">
-                <i class="fas fa-share-alt text-blue-600 mr-2"></i>Share Your Schedule
-            </h3>
-            
-            <div class="space-y-4">
-                <div class="bg-blue-50 p-4 rounded-lg">
-                    <h4 class="font-semibold text-blue-900 mb-2">📅 Google Calendar Import</h4>
-                    <p class="text-sm text-blue-700 mb-3">Import all ${googleCalendarURLs.length} events to Google Calendar:</p>
-                    <button onclick="openAllGoogleCalendarTabs(${JSON.stringify(googleCalendarURLs).replace(/"/g, '&quot;')}); document.body.removeChild(this.closest('.fixed'))" 
-                            class="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors">
-                        <i class="fab fa-google mr-2"></i>Import ${googleCalendarURLs.length} Events
-                    </button>
-                </div>
-                
-                <div class="bg-green-50 p-4 rounded-lg">
-                    <h4 class="font-semibold text-green-900 mb-2">📱 Calendar File (.ics)</h4>
-                    <p class="text-sm text-green-700 mb-3">Download and import to any calendar app (Recommended):</p>
-                    <button onclick="exportToCalendarFile(); document.body.removeChild(this.closest('.fixed'))" 
-                            class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors">
-                        <i class="fas fa-download mr-2"></i>Download .ics File
-                    </button>
-                </div>
-                
-                <div class="bg-purple-50 p-4 rounded-lg">
-                    <h4 class="font-semibold text-purple-900 mb-2">🔗 Share with Friends</h4>
-                    <p class="text-sm text-purple-700 mb-3">Schedule ID: <code class="bg-white px-2 py-1 rounded">${scheduleId}</code></p>
-                    <button onclick="copyShareableLink('${scheduleId}')" 
-                            class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition-colors">
-                        <i class="fas fa-copy mr-2"></i>Copy Shareable Link
-                    </button>
-                </div>
-                
-                <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-                    <p class="text-xs text-yellow-700">
-                        <i class="fas fa-lightbulb mr-1"></i>
-                        <strong>Note:</strong> Google Calendar import opens multiple tabs. For easier import, use the .ics file method.
-                    </p>
-                </div>
-            </div>
-            
-            <button onclick="document.body.removeChild(this.closest('.fixed'))" 
-                    class="w-full mt-6 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors">
-                Close
-            </button>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-}
-
-function copyShareableLink(scheduleId) {
-    const currentUrl = window.location.href.split('?')[0];
-    const shareableLink = `${currentUrl}?schedule=${scheduleId}`;
-    
-    navigator.clipboard.writeText(shareableLink).then(() => {
-        showNotification('Shareable link copied to clipboard!', 'success');
-    }).catch(err => {
-        console.error('Failed to copy: ', err);
-        showNotification('Failed to copy link. Schedule ID: ' + scheduleId, 'error');
-    });
-}
 
 // Export options modal
 function showExportOptions() {
@@ -873,21 +830,21 @@ function showExportOptions() {
             <p class="text-gray-600 mb-6">Choose how you'd like to export your class schedule:</p>
             
             <div class="space-y-3">
-                <button onclick="exportToCalendarFile(); document.body.removeChild(this.closest('.fixed'))" 
+                <button onclick="exportToCalendarFile(); closeModalAndRemove(this)" 
                         class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-colors text-left">
                     <i class="fas fa-download mr-3"></i>
                     <strong>Download Calendar File (.ics)</strong>
                     <div class="text-sm opacity-90">Best option - Works with all calendar apps</div>
                 </button>
                 
-                <button onclick="exportToGoogleCalendarURL(); document.body.removeChild(this.closest('.fixed'))" 
+                <button onclick="exportToGoogleCalendarURL(); closeModalAndRemove(this)" 
                         class="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition-colors text-left">
                     <i class="fab fa-google mr-3"></i>
                     <strong>Google Calendar Import</strong>
                     <div class="text-sm opacity-90">Creates individual events (opens multiple tabs)</div>
                 </button>
                 
-                <button onclick="copyCalendarText(); document.body.removeChild(this.closest('.fixed'))" 
+                <button onclick="copyCalendarText(); closeModalAndRemove(this)" 
                         class="w-full bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700 transition-colors text-left">
                     <i class="fas fa-copy mr-3"></i>
                     <strong>Copy Schedule Text</strong>
@@ -902,7 +859,7 @@ function showExportOptions() {
                 </p>
             </div>
             
-            <button onclick="document.body.removeChild(this.closest('.fixed'))" 
+            <button onclick="closeModalAndRemove(this)" 
                     class="w-full mt-4 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors">
                 Cancel
             </button>
@@ -939,37 +896,48 @@ function parseScheduleForICS(course) {
     
     return events;
 }
-
 function createICSEvent(course, dayName, startTime, endTime) {
     const eventTypeSuffix = course.eventType === 'lab' ? '_Lab' : 
                            course.eventType === 'exam' ? '_Exam' : '';
-    
+
     const summary = `${course.editableCourseName}${eventTypeSuffix} (${course.editableRoomNumber})`;
-    const description = `Course: ${course.editableCourseTitle}\\nInstructor: ${course.editableFacultyName}\\nEmail: ${course.editableInstructorEmail}\\nRoom: ${course.editableRoomNumber}\\nSection: ${course.sectionName}`;
-    const location = `${course.editableRoomNumber}, BRAC University, 66 Mohakhali, Dhaka 1212`;
+    // Create description with proper line breaks for ICS format
+    const descriptionParts = [
+        `Course: ${course.editableCourseTitle}`,
+        `Instructor: ${course.editableFacultyName}`,
+        `Email: ${course.editableInstructorEmail}`,
+        `Room: ${course.editableRoomNumber}`,
+        `Section: ${course.sectionName}`
+    ];
     
+    // Join with newlines and escape special characters for ICS format
+    let description = descriptionParts.join('\n');
+    // Escape commas, semicolons, and backslashes for ICS format
+    description = description.replace(/\\/g, '\\\\').replace(/,/g, '\\,').replace(/;/g, '\\;').replace(/\n/g, '\\n');
+    const location = `BRAC University, Kha 224, Bir Uttam Rafiqul Islam Ave, Dhaka 1212`;
+
     // Get next occurrence of this day
     const dayNumber = getDayNumber(dayName);
     const today = new Date();
     const nextOccurrence = getNextDayOccurrence(today, dayNumber);
-    
+
     // Set start and end times
     const startDateTime = new Date(nextOccurrence);
     const endDateTime = new Date(nextOccurrence);
-    
+
     startDateTime.setHours(...parseTime(startTime));
     endDateTime.setHours(...parseTime(endTime));
-    
+
     // Generate unique ID
     const uid = `${course.id}-${dayName}-${startDateTime.getTime()}@routine2calendar.com`;
-    
+
     // Use local time format for better compatibility
     const startLocal = formatDateForICSLocal(startDateTime);
     const endLocal = formatDateForICSLocal(endDateTime);
-    
+
     // Get notification time from user selection
     const notificationMinutes = getNotificationTime();
-    
+
     const eventLines = [
         'BEGIN:VEVENT',
         `UID:${uid}`,
@@ -983,7 +951,7 @@ function createICSEvent(course, dayName, startTime, endTime) {
         'STATUS:CONFIRMED',
         'TRANSP:OPAQUE'
     ];
-    
+
     // Add alarm/reminder if notification time is set
     if (notificationMinutes > 0) {
         eventLines.push(
@@ -994,9 +962,9 @@ function createICSEvent(course, dayName, startTime, endTime) {
             'END:VALARM'
         );
     }
-    
+
     eventLines.push('END:VEVENT');
-    
+
     return eventLines;
 }
 
@@ -1037,36 +1005,35 @@ function parseScheduleForGoogleURL(course) {
     
     return events;
 }
-
 function createGoogleCalendarURL(course, dayName, startTime, endTime) {
     const eventTypeSuffix = course.eventType === 'lab' ? '_Lab' : 
                            course.eventType === 'exam' ? '_Exam' : '';
-    
+
     const title = `${course.editableCourseName}${eventTypeSuffix} (${course.editableRoomNumber})`;
-    
-    // Get notification time and create reminder text
-    const notificationMinutes = getNotificationTime();
-    const reminderText = notificationMinutes > 0 ? 
-        `\\n\\n🔔 Reminder: Set ${getNotificationTimeText(notificationMinutes)} reminder in Google Calendar` : '';
-    
-    const details = `Course: ${course.editableCourseTitle}\\nInstructor: ${course.editableFacultyName}\\nEmail: ${course.editableInstructorEmail}\\nRoom: ${course.editableRoomNumber}${reminderText}`;
-    const location = 'BRAC University, 66 Mohakhali, Dhaka 1212';
-    
+
+    // Clean description without reminder text
+    const details = `Course: ${course.editableCourseTitle}\nInstructor: ${course.editableFacultyName}\nEmail: ${course.editableInstructorEmail}\nRoom: ${course.editableRoomNumber}`;
+    // Use the static address as requested
+    const location = 'BRAC University, Kha 224, Bir Uttam Rafiqul Islam Ave, Dhaka 1212';
+
     // Get next occurrence of this day
     const dayNumber = getDayNumber(dayName);
     const today = new Date();
     const nextOccurrence = getNextDayOccurrence(today, dayNumber);
-    
+
     // Set start and end times
     const startDateTime = new Date(nextOccurrence);
     const endDateTime = new Date(nextOccurrence);
-    
+
     startDateTime.setHours(...parseTime(startTime));
     endDateTime.setHours(...parseTime(endTime));
-    
+
     const startFormatted = formatDateForGoogle(startDateTime);
     const endFormatted = formatDateForGoogle(endDateTime);
-    
+
+    // Get notification time for the reminder parameter
+    const notificationMinutes = getNotificationTime();
+
     const params = new URLSearchParams({
         action: 'TEMPLATE',
         text: title,
@@ -1075,7 +1042,10 @@ function createGoogleCalendarURL(course, dayName, startTime, endTime) {
         location: location,
         recur: 'RRULE:FREQ=WEEKLY;COUNT=15'
     });
-    
+
+    // Note: Google Calendar URL templates don't reliably support custom reminder times
+    // Users will need to set reminders manually after import
+
     return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
@@ -1171,7 +1141,7 @@ function showImportInstructions() {
                 </div>
             </div>
             
-            <button onclick="document.body.removeChild(this.closest('.fixed'))" 
+            <button onclick="closeModalAndRemove(this)" 
                     class="w-full mt-6 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
                 Got it!
             </button>
@@ -1214,8 +1184,9 @@ function parseTime(timeString) {
 
 // Helper function to get selected notification time
 function getNotificationTime() {
-    const selector = document.getElementById('notificationTime');
-    return selector ? parseInt(selector.value) : 10; // Default to 10 minutes
+    // Get global notification time
+    const globalSelector = document.getElementById('globalNotificationTime');
+    return globalSelector ? parseInt(globalSelector.value) : 10; // Default to 10 minutes
 }
 
 // Helper function to format notification time text
@@ -1227,6 +1198,10 @@ function getNotificationTimeText(minutes) {
 }
 
 // Utility functions
+function closeModalAndRemove(element) {
+    document.body.removeChild(element.closest('.fixed'));
+}
+
 function showLoading() {
     document.getElementById('loadingState').classList.remove('hidden');
     document.getElementById('initialState').classList.add('hidden');
@@ -1296,4 +1271,25 @@ function loadFromLocalStorage() {
     } else {
         loadCourseData();
     }
+}
+
+// Helper function to extract schedule days for caching
+function extractScheduleDays(schedule) {
+    if (!schedule) return [];
+    
+    const separator = schedule.includes('\n') ? '\n' : ',';
+    const dayMatches = schedule.split(separator);
+    const days = [];
+    
+    dayMatches.forEach(daySchedule => {
+        const match = daySchedule.match(/(\w+)\(/);
+        if (match) {
+            const dayName = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+            if (!days.includes(dayName)) {
+                days.push(dayName);
+            }
+        }
+    });
+    
+    return days;
 }

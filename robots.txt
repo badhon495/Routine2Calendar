@@ -1,0 +1,37 @@
+User-agent: *
+Allow: /
+
+# High-priority pages
+Allow: /index.html
+Allow: /manifest.json
+Allow: /sitemap.xml
+
+# SEO and utility files
+Allow: /humans.txt
+Allow: /.well-known/security.txt
+
+# Sitemap
+Sitemap: https://badhon495.github.io/Routine2Calendar/sitemap.xml
+
+# Crawl-delay for politeness
+Crawl-delay: 1
+
+# Allow essential assets but discourage indexing
+Allow: /styles.css
+Allow: /script.js
+Allow: /analytics.js
+Allow: /performance-monitor.js
+
+# Block common bot paths that aren't relevant
+Disallow: /cgi-bin/
+Disallow: /wp-admin/
+Disallow: /admin/
+Disallow: /private/
+Disallow: /tmp/
+Disallow: /test/
+Disallow: /backup/
+
+# Disallow query parameters that don't change content
+Disallow: /*?utm_*
+Disallow: /*?ref=*
+Disallow: /*?source=*

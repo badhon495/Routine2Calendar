@@ -1,0 +1,37 @@
+/* TEAM */
+Developer: badhon495
+Contact: https://github.com/badhon495
+GitHub: @badhon495
+Location: Dhaka, Bangladesh
+
+/* THANKS */
+BRAC University students for feedback and testing
+Open source community for tools and libraries
+Tailwind CSS for the styling framework
+Font Awesome for the icon library
+
+/* SITE */
+Last update: 2025/07/13
+Language: English
+Standards: HTML5, CSS3, JavaScript ES6+
+Components: PWA, Service Worker, Responsive Design
+Software: VS Code, Git, GitHub Pages
+Technologies: Vanilla JavaScript, Tailwind CSS, Font Awesome
+
+/* PURPOSE */
+This tool was created to help BRAC University students easily
+export their class schedules to calendar applications.
+BRACU doesn't provide direct calendar integration,
+so this free tool bridges that gap.
+
+Features:
+- Convert BRACU schedules to ICS calendar files
+- Export to Google Calendar
+- Support for all major calendar apps
+- Mobile-responsive design
+- Real-time course data
+- Customizable reminders
+
+/* DEDICATION */
+Made with ❤️ for BRACU students
+Free and open source forever

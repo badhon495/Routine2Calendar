@@ -1,0 +1,42 @@
+{
+  "name": "Routine2Calendar - BRACU Schedule to Calendar",
+  "short_name": "Routine2Calendar",
+  "description": "Convert your BRAC University class schedule to Google Calendar with ease! Free tool for BRACU students to export their routine to any calendar app.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["education", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='15' fill='%232563eb'/%3E%3Ctext x='50%25' y='65%25' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'%3ER2C%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='15' fill='%232563eb'/%3E%3Ctext x='50%25' y='65%25' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'%3ER2C%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 640'%3E%3Crect width='320' height='640' fill='%23f9fafb'/%3E%3Crect x='20' y='80' width='280' height='60' rx='8' fill='%232563eb'/%3E%3Ctext x='160' y='115' text-anchor='middle' fill='white' font-size='20' font-weight='bold'%3ERoutine2Calendar%3C/text%3E%3Crect x='20' y='160' width='280' height='400' rx='8' fill='white' stroke='%23e5e7eb'/%3E%3Ctext x='40' y='190' font-size='16' font-weight='bold'%3EBRACU Course Schedule%3C/text%3E%3Crect x='40' y='210' width='240' height='30' rx='4' fill='%23f3f4f6'/%3E%3Crect x='40' y='250' width='240' height='30' rx='4' fill='%23f3f4f6'/%3E%3Crect x='40' y='290' width='240' height='30' rx='4' fill='%23f3f4f6'/%3E%3Crect x='200' y='500' width='80' height='35' rx='6' fill='%2310b981'/%3E%3Ctext x='240' y='520' text-anchor='middle' fill='white' font-size='12'%3EExport%3C/text%3E%3C/svg%3E",
+      "sizes": "320x640",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 768'%3E%3Crect width='1024' height='768' fill='%23f9fafb'/%3E%3Crect x='50' y='50' width='924' height='80' rx='8' fill='%232563eb'/%3E%3Ctext x='512' y='100' text-anchor='middle' fill='white' font-size='32' font-weight='bold'%3ERoutine2Calendar - BRACU Schedule Tool%3C/text%3E%3Crect x='50' y='150' width='450' height='500' rx='8' fill='white' stroke='%23e5e7eb'/%3E%3Ctext x='70' y='180' font-size='20' font-weight='bold'%3ESelected Courses%3C/text%3E%3Crect x='70' y='200' width='410' height='60' rx='6' fill='%23f3f4f6'/%3E%3Crect x='70' y='270' width='410' height='60' rx='6' fill='%23f3f4f6'/%3E%3Crect x='70' y='340' width='410' height='60' rx='6' fill='%23f3f4f6'/%3E%3Crect x='520' y='150' width='454' height='500' rx='8' fill='white' stroke='%23e5e7eb'/%3E%3Ctext x='540' y='180' font-size='20' font-weight='bold'%3EAvailable Courses%3C/text%3E%3Crect x='540' y='200' width='414' height='80' rx='6' fill='%23f9fafb'/%3E%3Crect x='540' y='290' width='414' height='80' rx='6' fill='%23f9fafb'/%3E%3Crect x='540' y='380' width='414' height='80' rx='6' fill='%23f9fafb'/%3E%3Crect x='380' y='600' width='120' height='40' rx='8' fill='%2310b981'/%3E%3Ctext x='440' y='625' text-anchor='middle' fill='white' font-size='16'%3EExport Schedule%3C/text%3E%3C/svg%3E",
+      "sizes": "1024x768",
+      "type": "image/svg+xml",
+      "form_factor": "wide"
+    }
+  ]
+}
